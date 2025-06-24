@@ -2,10 +2,12 @@ import csv
 import json
 import sqlite3
 from datetime import datetime
+import uuid
+
 
 class PowerCARDGenerator:
-
-    def __init__(self, record_length=168):
+        
+    def __init__(self, record_length=215):
         self.record_length = record_length
         self.field_template = [
             # Champ, Position, Longueur, Type, Valeur par défaut
@@ -27,118 +29,29 @@ class PowerCARDGenerator:
             ('gender','M', 131, 1, 'AN', None),
             ('document_code','M', 132, 2, 'AN', None),
             ('legal_id','O', 134, 30, 'AN', ' ' * 30),
-            ('title_code','M', 164, 2, 'AN', None)
+            ('title_code','M', 164, 2, 'AN', None),
+            ("client_name","M", 166, 50, 'AN', ' ' * 50)
         ]
-        self.init_db()
 
-    def init_db(self):
-        self.conn = sqlite3.connect(':memory:')
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            CREATE TABLE clients (
-                client_id TEXT,
-                nom TEXT,
-                bank_code TEXT,
-                branch_code TEXT
-            )
-        ''')
-        
-        cursor.execute('''CREATE TABLE POWERCARD_BANK (
-                bank_code TEXT,
-                nom TEXT,
-                file_number TEXT
-            )''')
-        
-        cursor.execute('''CREATE TABLE POWERCARD_BRANCH (
-                nom TEXT,
-                branch_code TEXT,
-                delivery_branch TEXT        
-            )''')
-        
-        cursor.execute('''CREATE TABLE CARD_PRODUCT (
-                nom TEXT,
-                card_product TEXT
-            )''')
-        
-        cursor.execute('''CREATE TABLE POWERCARD_PLASTIC_LIST (
-                nom TEXT,
-                plastic_type TEXT
-            )''')
-        
-        cursor.execute('''CREATE TABLE POWERCARD_FEES (
-                nom TEXT,
-                card_fees TEXT
-            )''')
-        
-        cursor.execute('''CREATE TABLE POWERCARD_DOCUMENT_LIST (
-                nom TEXT,
-                document_code TEXT
-            )''')
-        
-        cursor.execute('''CREATE TABLE POWERCARD_TITLELIST (
-                nom TEXT,
-                code TEXT
-            )''')
-        # Données d'exemple
-        clients = [
-            ('CLI001', 'Ahmed Benjelloun', '001001', '001001'),
-            ('CLI002', 'Fatima Alaoui', '002001', '001002'),
-            ('CLI003', 'Mohammed Tazi', '002002', '002001')
-        ]
-        cursor.executemany('INSERT INTO clients VALUES (?, ?, ?, ?)', clients)
-        
-        banks = [
-            ('001001', 'Bank Al Maghrib', 'BAM001'),
-            ('002001', 'Attijariwafa Bank', 'AWB002'),
-            ('002002', 'BMCE Bank', 'BMCE003')
-        ]
-        cursor.executemany('INSERT INTO POWERCARD_BANK VALUES (?, ?, ?)', banks)
-        
-        branches = [
-            ('Agence Casablanca Centre', '001001', '001001'),
-            ('Agence Rabat Agdal', '001002', '001002'),
-            ('Agence Marrakech Gueliz', '002001', '002001')
-        ]
-        cursor.executemany('INSERT INTO POWERCARD_BRANCH VALUES (?, ?, ?)', branches)
-        
-        card_products = [
-            ('Visa Classic', '001'),
-            ('Visa Gold', '002'),
-            ('Mastercard Standard', '003'),
-            ('Mastercard Premium', '004')
-        ]
-        cursor.executemany('INSERT INTO CARD_PRODUCT VALUES (?, ?)', card_products)
-        
-        plastic_types = [
-            ('Standard', '001'),
-            ('Premium', '002'),
-            ('VIP', '003')
-        ]
-        cursor.executemany('INSERT INTO POWERCARD_PLASTIC_LIST VALUES (?, ?)', plastic_types)
-        
-        fees = [
-            ('Frais Standard', '001'),
-            ('Frais Premium', '002'),
-            ('Frais VIP', '003')
-        ]
-        cursor.executemany('INSERT INTO POWERCARD_FEES VALUES (?, ?)', fees)
-        
-        documents = [
-            ('Carte Identité Nationale', '01'),
-            ('Passeport', '02'),
-            ('Permis de Conduire', '03')
-        ]
-        cursor.executemany('INSERT INTO POWERCARD_DOCUMENT_LIST VALUES (?, ?)', documents)
-        
-        titles = [
-            ('Monsieur', '01'),
-            ('Madame', '02'),
-            ('Mademoiselle', '03'),
-            ('Docteur', '04'),
-            ('Professeur', '05')
-        ]
-        cursor.executemany('INSERT INTO POWERCARD_TITLELIST VALUES (?, ?)', titles)
-        self.conn.commit()
+    def insert(self, json_file):
+        try:
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"Erreur lors de la lecture du fichier JSON: {e}")
+            return False
+        for item in data:
+            if item.get("action") == "NI":
+                con = sqlite3.connect('ma_base.db')
+                cursor =con.cursor()
+                if all(k in item for k in ("client_name", "bank_code", "branch_code")):
+                    cursor.execute(
+                        "INSERT INTO clients (client_name, bank_code, branch_code) VALUES (?, ?, ?)",
+                        (item["client_name"], item["bank_code"], item["branch_code"])
+                    )
+                    print(f"[INSERT] client_name {item['client_name']} added to clients.")
+                con.commit()
+                con.close()
 
     def format_date(self, date_str):
         if not date_str:
@@ -155,12 +68,13 @@ class PowerCARDGenerator:
             return datetime.now().strftime("%Y%m%d")
 
     def validate_required_fields(self, data):
+
         required_fields = [field[0] for field in self.field_template if field[1] == 'M']
         missing_fields = [field for field in required_fields if not data.get(field)]
         if missing_fields:
             raise ValueError(f"Champs obligatoires manquants: {missing_fields}")
         return True
-
+    
     def update_field_template(self, new_template):
         self.field_template = new_template
         max_position = 0
@@ -188,7 +102,7 @@ class PowerCARDGenerator:
             if field_type == 'DATE':
                 value = self.format_date(value)
             elif field_type == 'N':
-                value = str(value).zfill(length)[-length:]
+                value = str(value).rjust(length)[-length:]
             elif field_type == 'AN':
                 value = str(value).ljust(length)[:length]
             
@@ -198,7 +112,6 @@ class PowerCARDGenerator:
         
         return ''.join(record)
 
-    def generate_from_csv(self, csv_file, output_file):
         records = []
         try:
             with open(csv_file, 'r') as f:
@@ -220,7 +133,7 @@ class PowerCARDGenerator:
         except Exception as e:
             print(f"Erreur lors de la lecture du fichier JSON: {e}")
             return False
-            
+
         records = []
         if isinstance(data, list):
             for i, row in enumerate(data, 1):
@@ -260,21 +173,3 @@ class PowerCARDGenerator:
         except Exception as e:
             print(f"Erreur lors de la validation: {e}")
             return False
-
-def main():
-    generator = PowerCARDGenerator()
-    try:
-        success = generator.generate_from_json('data_example.json', 'output_powercard.txt')
-        if success:
-            if generator.validate_file('output_powercard.txt'):
-                print("Fichier validé avec succès.")
-                with open('output_powercard.txt', 'r') as f:
-                    for i, line in enumerate(f, 1):
-                        print(f"Ligne {i}: {line.strip()}")
-            else:
-                print("Échec de la validation du fichier PowerCARD.")
-    except Exception as e:
-        print(f"Erreur lors de l'exécution: {e}")
-
-if __name__ == "__main__":
-    main()
