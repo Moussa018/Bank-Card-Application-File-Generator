@@ -1,7 +1,10 @@
 💳 Bank Card Application File Generator
+
+
 A simple yet powerful tool to generate standardized bank card request files based on user input and a flexible template.
 
 🚀 Features
+
 📂 Import user data from .json or .csv files
 
 🧩 Customizable templates for field structure and validation
@@ -12,20 +15,9 @@ A simple yet powerful tool to generate standardized bank card request files base
 
 🖥️ User-friendly GUI built with Tkinter
 
-🧑‍💻 How to Use
-Run the app:
-
-bash
-Copier
-Modifier
-python app.py
-Load user data (JSON or CSV)
-
-Select or edit a template
-
-Click Generate – your file will be ready!
 
 🛠 Requirements
+
 Python 3.10+
 
 Tkinter (usually included with Python)
@@ -33,6 +25,7 @@ Tkinter (usually included with Python)
 No external dependencies
 
 📌 Tip
+
 Want to change how fields are validated or formatted? Just update the template in the interface or load a new one from file.
 
 
