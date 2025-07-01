@@ -2,26 +2,41 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
 from PowerCARDGenerator import PowerCARDGenerator
-import os
-
 
 generator = PowerCARDGenerator()
-json_data = []  
+json_data = []
 
 def traiter_fichier():
     global json_data
     if not json_data:
-        messagebox.showwarning("Attention", "Veuillez d'abord charger et modifier un fichier JSON.")
-        return
+        fichier = filedialog.askopenfilename(
+            title="Sélectionner un fichier JSON",
+            filetypes=[("Fichiers JSON", "*.json")]
+        )
+        if not fichier:
+            return
+        try:
+            with open(fichier, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                messagebox.showerror("Erreur", "Le fichier JSON doit contenir une liste d'objets.")
+                return
+            json_data = data
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de charger le fichier JSON : {e}")
+            return
+
+    if not verifier_longueurs():
+        return 
+
     fichier_sortie = "output_code.txt"
     try:
-        # Générer depuis les données JSON modifiées (en mémoire)
-        with open("temp_modified.json", "w") as f:
+        with open("temp_modified.json", "w", encoding="utf-8") as f:
             json.dump(json_data, f, ensure_ascii=False, indent=2)
+
         success = generator.generate_from_json("temp_modified.json", fichier_sortie)
         if success:
             if generator.validate_file(fichier_sortie):
-                generator.insert("temp_modified.json")
                 chemin_sortie_var.set(fichier_sortie)
                 messagebox.showinfo("Succès", "Fichier généré et validé avec succès.")
             else:
@@ -29,7 +44,19 @@ def traiter_fichier():
         else:
             messagebox.showerror("Erreur", "Échec de la génération du fichier.")
     except Exception as e:
-        messagebox.showerror("Erreur", str(e))
+        messagebox.showerror("Erreur", f"Erreur inattendue : {e}")
+
+def charger_template():
+    chemin = filedialog.askopenfilename(
+        title="Sélectionner un fichier template JSON",
+        filetypes=[("Fichiers JSON", "*.json")]
+    )
+    if chemin:
+        try:
+            generator.charger_template_depuis_fichier(chemin)
+            messagebox.showinfo("Succès", f"Template chargé depuis:\n{chemin}")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de charger le template:\n{e}")
 
 def afficher_contenu_txt(event=None):
     chemin = chemin_sortie_var.get()
@@ -56,15 +83,18 @@ def afficher_modifier_template():
     fenetre_template.title("📐 Modifier le Template")
     fenetre_template.geometry("1000x400")
 
-    colonnes = ['Nom', 'Obligatoire', 'Position', 'Longueur', 'Type', 'Valeur par défaut']
+    colonnes = ['Nom', 'Obligatoire', 'Position','Min_Longueur', 'Max_Longueur', 'Type', 'Valeur par défaut']
     tree = ttk.Treeview(fenetre_template, columns=colonnes, show="headings", selectmode="browse")
     for col in colonnes:
         tree.heading(col, text=col)
         tree.column(col, width=140, anchor="center")
     tree.pack(expand=True, fill="both", padx=10, pady=10)
-
     for champ in generator.field_template:
-        tree.insert("", "end", values=champ)
+        if len(champ) == 7:
+            nom, obligatoire, position, min_longueur, max_longueur, type_champ, valeur_defaut = champ
+            tree.insert("", "end", values=(nom, obligatoire, position, min_longueur, max_longueur, type_champ, valeur_defaut))
+        else:
+            messagebox.showerror("Erreur", f"Template invalide : {champ} (attendu 7 champs, trouvé {len(champ)})")
 
     def modifier_cellule(event):
         item = tree.identify_row(event.y)
@@ -96,13 +126,15 @@ def afficher_modifier_template():
             nouveau_template = []
             for item_id in tree.get_children():
                 values = list(tree.item(item_id, "values"))
+                # Fixed: Properly handle the 7-element tuple creation
                 champ = (
-                    str(values[0]),
-                    str(values[1]),
-                    int(values[2]),
-                    int(values[3]),
-                    str(values[4]),
-                    values[5] if values[5] != 'None' else None
+                    str(values[0]),                    # nom
+                    str(values[1]),                    # obligatoire
+                    int(values[2]),                    # position
+                    int(values[3]),                    # min_longueur
+                    int(values[4]),                    # max_longueur
+                    str(values[5]),                    # type_champ
+                    values[6] if values[6] != 'None' else None  # valeur_defaut
                 )
                 nouveau_template.append(champ)
             generator.update_field_template(nouveau_template)
@@ -111,7 +143,7 @@ def afficher_modifier_template():
         except Exception as e:
             messagebox.showerror("Erreur", f"Échec de la mise à jour du template : {e}")
 
-    btn_save = ttk.Button(fenetre_template, text="💾 Sauvegarder les modifications", command=sauvegarder_template)
+    btn_save = ttk.Button(fenetre_template, text=" Sauvegarder les modifications", command=sauvegarder_template)
     btn_save.pack(pady=10)
 
 def afficher_modifier_json():
@@ -169,7 +201,6 @@ def afficher_modifier_json():
             tree.item(item, values=values)
             entry.destroy()
 
-            # Met à jour json_data
             item_index = tree.index(item)
             json_data[item_index][colonnes[col_index]] = new_value
 
@@ -196,55 +227,32 @@ def afficher_modifier_json():
     btn_save_json = ttk.Button(fenetre_json, text="💾 Sauvegarder JSON modifié", command=sauvegarder_json)
     btn_save_json.pack(pady=10)
 
+def verifier_longueurs():
+    if not json_data:
+        messagebox.showwarning("Attention", "Aucune donnée JSON chargée.")
+        return False 
 
-    fen_chatbot = tk.Toplevel(fenetre)
-    fen_chatbot.title("🤖 Mini Chatbot")
-    fen_chatbot.geometry("400x400")
+    erreurs = []
+    for i, obj in enumerate(json_data, start=1):
+        for champ in generator.field_template:
+            nom, obligatoire, position, min_longueur, max_longueur, type_champ, valeur_defaut = champ
+            valeur = str(obj.get(nom, ""))
+            if len(valeur) > max_longueur  :
+                erreurs.append(f"Ligne {i} : '{nom}' dépasse {max_longueur} caractères (actuel : {len(valeur)})")
+            elif len(valeur) < min_longueur and obligatoire == "M" :
+                erreurs.append(f"Ligne {i} : '{nom}' ne dépasse pas {min_longueur} caractères (actuel : {len(valeur)})")
+              
+    if erreurs:
+        message = "\n".join(erreurs)
+        messagebox.showerror("Erreurs de longueur", message)
+        return False
+    else:
+        messagebox.showinfo("Succès", "Tous les champs respectent les longueurs du template.")
+        return True
 
-    frame_chat = ttk.Frame(fen_chatbot, padding=10)
-    frame_chat.pack(expand=True, fill="both")
 
-    zone_discussion = tk.Text(frame_chat, state="disabled", wrap="word", height=15)
-    zone_discussion.pack(expand=True, fill="both")
-
-    entry_question = ttk.Entry(frame_chat)
-    entry_question.pack(fill="x", pady=5)
-    
-    def repondre():
-        question = entry_question.get().strip()
-        if not question:
-            return
-        zone_discussion.configure(state="normal")
-        zone_discussion.insert("end", f"Toi : {question}\n")
-        zone_discussion.configure(state="disabled")
-        zone_discussion.see("end")
-        entry_question.delete(0, "end")
-
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "Tu es un assistant utile et poli."},
-                    {"role": "user", "content": question}
-                ],
-                max_tokens=150,
-                temperature=0.7,
-            )
-            reponse = response.choices[0].message.content.strip()
-        except Exception as e:
-            reponse = f"Erreur API : {e}"
-
-        zone_discussion.configure(state="normal")
-        zone_discussion.insert("end", f"Bot : {reponse}\n\n")
-        zone_discussion.configure(state="disabled")
-        zone_discussion.see("end")
-
-    bouton_envoyer = ttk.Button(frame_chat, text="Envoyer", command=repondre)
-    bouton_envoyer.pack(pady=5)  
-
-# --- Interface principale ---
 fenetre = tk.Tk()
-fenetre.title("🧾 Générateur PowerCARD")
+fenetre.title("Générateur de fichier de demande de carte banquaire")
 fenetre.geometry("600x480")
 fenetre.configure(bg="#f0f0f5")
 
@@ -262,19 +270,22 @@ frame.pack(expand=True, fill="both")
 titre = ttk.Label(frame, text="Bienvenue dans le Générateur PowerCARD", font=("Segoe UI", 16, "bold"))
 titre.pack(pady=(0, 25))
 
-btn_generer = ttk.Button(frame, text="📄 Générer le fichier texte", command=traiter_fichier)
+btn_generer = ttk.Button(frame, text="Générer le fichier texte", command=traiter_fichier)
 btn_generer.pack(pady=12, ipadx=12)
 
-btn_template = ttk.Button(frame, text="📐 Afficher / Modifier le template", command=afficher_modifier_template)
+btn_template = ttk.Button(frame, text="Modifier le template ", command=afficher_modifier_template)
 btn_template.pack(pady=12, ipadx=12)
 
-btn_json = ttk.Button(frame, text="📊 Afficher / Modifier JSON", command=afficher_modifier_json)
+btn_charger = ttk.Button(frame, text="Charger un nouveau template ", command=charger_template)
+btn_charger.pack(pady=12 , ipadx=12)
+
+btn_json = ttk.Button(frame, text="Modifier JSON", command=afficher_modifier_json)
 btn_json.pack(pady=12, ipadx=12)
 
 champ_fichier_label = ttk.Label(frame, text="Fichier généré : (cliquez pour l'ouvrir)")
 champ_fichier_label.pack(pady=(25, 8))
 
-champ_fichier = ttk.Entry(frame, textvariable=chemin_sortie_var, width=55, state="readonly", cursor="hand2")
+champ_fichier = tk.Entry(frame, textvariable=chemin_sortie_var, width=55, state="readonly", cursor="hand2", bg="white", readonlybackground="white")
 champ_fichier.pack()
 champ_fichier.bind("<Button-1>", afficher_contenu_txt)
 

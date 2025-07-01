@@ -1,64 +1,44 @@
 import json
 from datetime import datetime
+import random
+import string
 
 class PowerCARDGenerator:
 
     def __init__(self, record_length=215):
         self.record_length = record_length
         self.field_template = [
-            ('record_type','M', 1, 2, 'AN', 'DT'),
-            ('sequence','M', 3, 19, 'N', '0'),
-            ('action','M', 22, 2, 'AN', 'IN'),
-            ('language','M', 24, 5, 'AN', 'fr_FR'),
-            ('bank_code','M', 29, 6, 'AN', None),
-            ('branch_code','M', 35, 6, 'AN', None),
-            ('app_date','M', 41, 8, 'DATE', None),
-            ('delivery_branch','O', 49, 6, 'AN', ' ' * 6),
-            ('client_host_id','O', 55, 24, 'AN', ' ' * 24),
-            ('file_number','M', 77, 20, 'AN', None),
-            ('client_code','O', 97, 24, 'AN', ' ' * 24),
-            ('card_product','M', 121, 3, 'AN', None),
-            ('plastic_type','M', 124, 3, 'AN', ' ' * 3),
-            ('card_fees','O', 127, 3, 'AN', None),
-            ('family_status','M', 130, 1, 'AN', None),
-            ('gender','M', 131, 1, 'AN', None),
-            ('document_code','M', 132, 2, 'AN', None),
-            ('legal_id','O', 134, 30, 'AN', ' ' * 30),
-            ('title_code','M', 164, 2, 'AN', None),
-            ("client_name","M", 166, 50, 'AN', ' ' * 50)
+            ['record_type','M', 1, 2, 2, 'AN', 'DT'],
+            ['sequence','M', 3, 5, 19, 'N', '0'],
+            ['action','M', 22, 1, 2, 'AN', 'IN'],
+            ['language','O', 24, 5, 5, 'AN', ["FRfra", "ANang", "ESesp"]],
+            ['bank_code','M', 29, 2, 6, 'AN', None],
+            ['branch_code','M', 35, 4, 6, 'AN', None],
+            ['app_date','M', 41, 10, 10, 'DATE', None],
+            ['delivery_branch','O', 49, 2, 6, 'AN', 6 * ' '],
+            ['client_host_id','O', 55, 13, 24, 'AN', 24 * ' '],
+            ['file_number','M', 77, 10, 20, 'AN', None],
+            ['client_code','O', 97, 15, 24, 'AN', 24 * ' '],
+            ['card_product','M', 121, 1, 3, 'AN', None],
+            ['plastic_type','M', 124, 2, 3, 'AN', 3 * ' '],
+            ['card_fees','O', 127, 2, 3, 'AN', None],
+            ['family_status','M', 130, 1, 1, 'AN', None],
+            ['gender','M', 131, 1, 1, 'AN', None],
+            ['document_code','M', 132, 1, 2, 'AN', None],
+            ['legal_id','O', 134, 9, 30, 'AN', 30 * ' '],
+            ['title_code','M', 164, 1, 2, 'AN', None],
+            ['client_name','M', 166, 10, 50, 'AN', 50 * ' '],
         ]
-
-    def update_field_template(self, new_template):
-        self.field_template = new_template
-        max_position = 0
-        for field in self.field_template:
-            field_end = field[2] + field[3]  # Position + Longueur
-            if field_end > max_position:
-                max_position = field_end
-        self.record_length = max_position - 1
-
-    def insert(self, json_file):
-        try:
-            with open(json_file, 'r') as f:
-                data = json.load(f)
-        except Exception as e:
-            print(f"Erreur lors de la lecture du fichier JSON: {e}")
-            return False
-        for item in data:
-            if item.get("action") == "NI":
-                con = sqlite3.connect('ma_base.db')
-                cursor = con.cursor()
-                if all(k in item for k in ("client_name", "bank_code", "branch_code")):
-                    cursor.execute(
-                        "INSERT INTO clients (client_name, bank_code, branch_code) VALUES (?, ?, ?)",
-                        (item["client_name"], item["bank_code"], item["branch_code"])
-                    )
-                con.commit()
-                con.close()
+        for a in self.field_template:
+            if a[1] == 'O' and a[0] != 'language':
+                a[-1]= int(10**(a[4]) * random.uniform(1e-10, 1 - 1e-10))
+   
+    def charger_template_depuis_fichier(self, chemin_fichier):
+        with open(chemin_fichier, "r", encoding="utf-8") as f:
+            self.field_template = json.load(f)
+        print("Template chargé :", self.field_template)
 
     def format_date(self, date_str):
-        if not date_str:
-            return datetime.now().strftime("%Y%m%d")
         try:
             if '/' in date_str:
                 return datetime.strptime(date_str, "%d/%m/%Y").strftime("%Y%m%d")
@@ -85,20 +65,31 @@ class PowerCARDGenerator:
 
         record = [' '] * self.record_length
 
-        for field_name, required, pos, length, field_type, default_value in self.field_template:
-            value = data.get(field_name, default_value)
-            if value is None:
-                raise ValueError(f"Valeur manquante pour le champ obligatoire: {field_name}")
+        for field_name, required, pos, min_length, max_length, field_type, default_value in self.field_template:
+            value = data.get(field_name, "").strip()
+
+            if not value:
+                if isinstance(default_value, list):
+                    value = random.choice(default_value)
+                elif isinstance(default_value, str) and ',' in default_value:
+                    choix = [v.strip() for v in default_value.split(',')]
+                    value = random.choice(choix)
+                elif default_value is not None:
+                    value = default_value
+                elif required == "O":
+                    value = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(min_length, max_length)))
+                else:
+                    raise ValueError(f"Valeur manquante pour le champ obligatoire: {field_name}")
 
             if field_type == 'DATE':
                 value = self.format_date(value)
             elif field_type == 'N':
-                value = str(value).rjust(length)[-length:]
+                value = str(value).rjust(max_length)[:max_length]
             elif field_type == 'AN':
-                value = str(value).ljust(length)[:length]
+                value = str(value).ljust(max_length)[:max_length]
 
             start = pos - 1
-            end = start + length
+            end = start + max_length
             record[start:end] = list(value)
 
         return ''.join(record)
