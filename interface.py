@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
 from PowerCARDGenerator import PowerCARDGenerator
-
+from faker import Faker 
 generator = PowerCARDGenerator()
 json_data = []
 
@@ -80,7 +80,7 @@ def afficher_contenu_txt(event=None):
 
 def afficher_modifier_template():
     fenetre_template = tk.Toplevel(fenetre)
-    fenetre_template.title("📐 Modifier le Template")
+    fenetre_template.title(" Modifier le Template")
     fenetre_template.geometry("1000x400")
 
     colonnes = ['Nom', 'Obligatoire', 'Position','Min_Longueur', 'Max_Longueur', 'Type', 'Valeur par défaut']
@@ -126,15 +126,14 @@ def afficher_modifier_template():
             nouveau_template = []
             for item_id in tree.get_children():
                 values = list(tree.item(item_id, "values"))
-                # Fixed: Properly handle the 7-element tuple creation
                 champ = (
                     str(values[0]),                    # nom
                     str(values[1]),                    # obligatoire
                     int(values[2]),                    # position
-                    int(values[3]),                    # min_longueur
-                    int(values[4]),                    # max_longueur
-                    str(values[5]),                    # type_champ
-                    values[6] if values[6] != 'None' else None  # valeur_defaut
+                    int(values[3]),                    # minlongueur
+                    int(values[4]),                    # maxlongueur
+                    str(values[5]),                    # typechamp
+                    values[6] if values[6] != 'None' else None  # valeur
                 )
                 nouveau_template.append(champ)
             generator.update_field_template(nouveau_template)
@@ -224,7 +223,7 @@ def afficher_modifier_json():
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur lors de la sauvegarde : {e}")
 
-    btn_save_json = ttk.Button(fenetre_json, text="💾 Sauvegarder JSON modifié", command=sauvegarder_json)
+    btn_save_json = ttk.Button(fenetre_json, text="Sauvegarder JSON modifié", command=sauvegarder_json)
     btn_save_json.pack(pady=10)
 
 def verifier_longueurs():
@@ -267,7 +266,7 @@ chemin_sortie_var = tk.StringVar()
 frame = ttk.Frame(fenetre, padding=25)
 frame.pack(expand=True, fill="both")
 
-titre = ttk.Label(frame, text="Bienvenue dans le Générateur PowerCARD", font=("Segoe UI", 16, "bold"))
+titre = ttk.Label(frame, text="Bienvenue", font=("Segoe UI", 16, "bold"))
 titre.pack(pady=(0, 25))
 
 btn_generer = ttk.Button(frame, text="Générer le fichier texte", command=traiter_fichier)

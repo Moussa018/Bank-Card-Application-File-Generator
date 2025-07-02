@@ -2,7 +2,6 @@
   {
     "record_type": "DT",
     "sequence": "0000000000000002222",
-    "action": "IN",
     "bank_code": "001001",
     "branch_code": "001001",
     "file_number": "BAM1234567",
@@ -18,6 +17,6 @@
     "plastic_type": "001",
     "legal_id": "K123456789",
     "app_date": "2023-05-15",
-    "client_name": "Jean Dupont"
+    "client_name": "Jean Dupon"
   }
 ]
