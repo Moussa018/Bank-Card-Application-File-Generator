@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox
 import json
 from PowerCARDGenerator import PowerCARDGenerator
 from faker import Faker 
+import glob
 generator = PowerCARDGenerator()
 json_data = []
 
@@ -29,20 +30,18 @@ def traiter_fichier():
     if not verifier_longueurs():
         return 
 
-    fichier_sortie = "output_code.txt"
     try:
         with open("temp_modified.json", "w", encoding="utf-8") as f:
             json.dump(json_data, f, ensure_ascii=False, indent=2)
-
-        success = generator.generate_from_json("temp_modified.json", fichier_sortie)
-        if success:
-            if generator.validate_file(fichier_sortie):
-                chemin_sortie_var.set(fichier_sortie)
-                messagebox.showinfo("Succès", "Fichier généré et validé avec succès.")
-            else:
-                messagebox.showerror("Erreur", "Le fichier généré est invalide.")
+        generator.generate_from_json("temp_modified.json", None)
+        # Chercher tous les fichiers output_*.txt générés
+        fichiers_generes = sorted(glob.glob("output_*.txt"))
+        if fichiers_generes:
+            chemin_sortie_var.set(", ".join(fichiers_generes))
+            afficher_labels_fichiers(fichiers_generes)
+            messagebox.showinfo("Succès", f"Fichiers générés et validés avec succès :\n" + "\n".join(fichiers_generes))
         else:
-            messagebox.showerror("Erreur", "Échec de la génération du fichier.")
+            messagebox.showerror("Erreur", "Aucun fichier n'a été généré.")
     except Exception as e:
         messagebox.showerror("Erreur", f"Erreur inattendue : {e}")
 
@@ -230,7 +229,6 @@ def verifier_longueurs():
     if not json_data:
         messagebox.showwarning("Attention", "Aucune donnée JSON chargée.")
         return False 
-
     erreurs = []
     for i, obj in enumerate(json_data, start=1):
         for champ in generator.field_template:
@@ -249,6 +247,29 @@ def verifier_longueurs():
         messagebox.showinfo("Succès", "Tous les champs respectent les longueurs du template.")
         return True
 
+def afficher_labels_fichiers(fichiers):
+    for lbl in labels_fichiers:
+        lbl.destroy()
+    labels_fichiers.clear()
+    for chemin in fichiers:
+        lbl = ttk.Label(frame_fichiers, text=chemin, foreground="blue", cursor="hand2")
+        lbl.pack(anchor="center", pady=2)
+        lbl.bind("<Button-1>", lambda e, c=chemin: afficher_contenu_fichier(c))
+        labels_fichiers.append(lbl)
+
+def afficher_contenu_fichier(chemin):
+    try:
+        with open(chemin, "r", encoding="utf-8") as f:
+            contenu = f.read()
+        fenetre_txt = tk.Toplevel(fenetre)
+        fenetre_txt.title(f"Contenu de {chemin}")
+        fenetre_txt.geometry("700x500")
+        zone_texte = tk.Text(fenetre_txt, wrap="word", font=("Consolas", 11))
+        zone_texte.insert("1.0", contenu)
+        zone_texte.configure(state="disabled", bg="#f9f9f9")
+        zone_texte.pack(expand=True, fill="both", padx=10, pady=10)
+    except Exception as e:
+        messagebox.showerror("Erreur", f"Impossible d'ouvrir le fichier : {e}")
 
 fenetre = tk.Tk()
 fenetre.title("Générateur de fichier de demande de carte banquaire")
@@ -282,10 +303,10 @@ btn_json = ttk.Button(frame, text="Modifier JSON", command=afficher_modifier_jso
 btn_json.pack(pady=12, ipadx=12)
 
 champ_fichier_label = ttk.Label(frame, text="Fichier généré : (cliquez pour l'ouvrir)")
-champ_fichier_label.pack(pady=(25, 8))
+champ_fichier_label.pack(pady=(25, 8), anchor="center")
 
-champ_fichier = tk.Entry(frame, textvariable=chemin_sortie_var, width=55, state="readonly", cursor="hand2", bg="white", readonlybackground="white")
-champ_fichier.pack()
-champ_fichier.bind("<Button-1>", afficher_contenu_txt)
+frame_fichiers = ttk.Frame(frame)
+frame_fichiers.pack(pady=(10, 0))
+labels_fichiers = []
 
 fenetre.mainloop()

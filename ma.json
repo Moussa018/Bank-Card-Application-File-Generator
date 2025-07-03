@@ -1,4 +1,4 @@
-[
+[  
   {
     "record_type": "DT",
     "sequence": "0000000000000002222",
@@ -11,12 +11,37 @@
     "gender": "M",
     "document_code": "01",
     "title_code": "01",
-    "application_date": "2023-05-15",
     "client_host_id": "CLI00112345678",
     "client_code": "CLI001123456789",
     "plastic_type": "001",
     "legal_id": "K123456789",
-    "app_date": "20230515",
-    "client_name": ""
+    "client_name": "Jean Dupon"
+  },
+  
+
+{
+  "record_type": "DT",
+  "sequence": "0000000000000002222",
+  "bank_code": "001001",
+  "branch_code": "001001",
+  "file_number": "BAM1234567",
+  "card_product": "001",
+  "card_fees": "001",
+  "family_status": "M",
+  "gender": "M",
+  "document_code": "01",
+  "title_code": "01",
+  "client_host_id": "CLI00112345678",
+  "client_code": "CLI001123456789",
+  "plastic_type": "001",
+  "legal_id": "K123456789",
+  "client_name": "Jean Dupon"
+},
+
+  {
+    "record_type": "DT",
+    "bank_code": "001001",
+    "branch_code": "001001"
+ 
   }
-]
+ ]

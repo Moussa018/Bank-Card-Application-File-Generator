@@ -3,18 +3,18 @@ from datetime import datetime
 import random
 import string
 from faker import Faker  
-fake = Faker()
+
 class PowerCARDGenerator :
     def __init__(self, record_length=215):
         self.record_length = record_length
         self.field_template = [
             ['record_type','M', 1, 2, 2, 'AN', 'DT'],
-            ['sequence','M', 3, 5, 19, 'N', None],
+            ['sequence','O', 3, 5, 19, 'N', None],
             ['action','O', 22, 1, 2, 'AN', ["NI","MO"]],
             ['language','O', 24, 5, 5, 'AN', ["FRfra", "ANang", "ESesp"]],
             ['bank_code','M', 29, 2, 6, 'AN', None],
             ['branch_code','M', 35, 4, 6, 'AN', None],
-            ['app_date','M', 41, 8, 8, 'DATE', None],
+            ['app_date','O', 41, 8, 8, 'DATE', None],
             ['delivery_branch','O', 49, 2, 6, 'AN', None],
             ['client_host_id','O', 55, 13, 24, 'AN', None],
             ['file_number','O', 77, 10, 20, 'AN', None],
@@ -22,9 +22,9 @@ class PowerCARDGenerator :
             ['card_product','O', 121, 1, 3, 'AN', None],
             ['plastic_type','O', 124, 2, 3, 'AN', None],
             ['card_fees','O', 127, 2, 3, 'AN', None],
-            ['family_status','M', 130, 1, 1, 'AN', ["M","D","C"]],
-            ['gender','M', 131, 1, 1, 'AN', ["M","F"]],
-            ['document_code','M', 132, 1, 2, 'AN', None],
+            ['family_status','O', 130, 1, 1, 'AN', ["M","D","C"]],
+            ['gender','O', 131, 1, 1, 'AN', ["M","F"]],
+            ['document_code','O', 132, 1, 2, 'AN', None],
             ['legal_id','O', 134, 9, 30, 'AN', None],
             ['title_code','O', 164, 1, 2, 'AN', None],
             ['client_name','O', 166, 10, 50, 'AN', None],
@@ -39,16 +39,6 @@ class PowerCARDGenerator :
             self.field_template = json.load(f)
         print("Template chargé :", self.field_template)
 
-    def format_date(self, date_str):
-        try:
-            if '/' in date_str:
-                return datetime.strptime(date_str, "%d/%m/%Y").strftime("%Y%m%d")
-            elif len(date_str) == 8 and date_str.isdigit():
-                return date_str
-            else:
-                return datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y%m%d")
-        except ValueError:
-            return datetime.now().strftime("%Y%m%d")
 
     def validate_required_fields(self, data):
         required_fields = [field[0] for field in self.field_template if field[1] == 'M']
@@ -65,7 +55,7 @@ class PowerCARDGenerator :
             return None
 
         record = [' '] * self.record_length
-
+        fake = Faker()
         for field_spec in self.field_template:
             field_name, required, pos, min_length, max_length, field_type, default_value = field_spec
             value = data.get(field_name, "").strip()
@@ -82,9 +72,8 @@ class PowerCARDGenerator :
                     max_num = 10**max_length - 1
                     value = str(random.randint(0, max_num)).zfill(max_length)
             try:
-                if field_type == 'DATE':
-                    value = self.format_date(value)
-                elif field_type == 'N':
+               
+                if field_type == 'N':
                     value = str(value).zfill(max_length)[:max_length]
                 elif field_type == 'AN':
                     value = str(value).ljust(max_length)[:max_length]
@@ -99,7 +88,7 @@ class PowerCARDGenerator :
 
         return ''.join(record)
     
-    def generate_from_json(self, json_file, output_file):
+    def generate_from_json(self, json_file, output_file=None):
         try:
             with open(json_file, 'r') as f:
                 data = json.load(f)
@@ -107,27 +96,35 @@ class PowerCARDGenerator :
             print(f"Erreur lors de la lecture du fichier JSON: {e}")
             return False
 
-        records = []
         if isinstance(data, list):
+            success = True
             for i, row in enumerate(data, 1):
                 record = self.create_record(row, i)
                 if record:
-                    records.append(record)
+                    output_file_name = f"output_{i}.txt"
+                    try:
+                        with open(output_file_name, 'w') as f_out:
+                            f_out.write(record + '\n')
+                    except Exception as e:
+                        print(f"Erreur lors de l'écriture du fichier {output_file_name}: {e}")
+                        success = False
+                else:
+                    success = False
+            return success
         elif isinstance(data, dict):
             record = self.create_record(data, 1)
             if record:
-                records.append(record)
-
-        return self._write_output_file(output_file, records)
-
-    def _write_output_file(self, output_file, records):
-        try:
-            with open(output_file, 'w') as f:
-                for record in records:
-                    f.write(record + '\n')
-            return True
-        except Exception as e:
-            print(f"Erreur lors de l'écriture: {e}")
+                try:
+                    with open("output_1.txt", 'w') as f_out:
+                        f_out.write(record + '\n')
+                    return True
+                except Exception as e:
+                    print(f"Erreur lors de l'écriture du fichier output_1.txt: {e}")
+                    return False
+            else:
+                return False
+        else:
+            print("Le fichier JSON doit contenir une liste ou un dictionnaire.")
             return False
 
     def validate_file(self, filename):
