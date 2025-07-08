@@ -1,5 +1,4 @@
 
-```markdown
 # 💳 Bank Card Application File Generator
 
 A modern, full-stack web application for generating standardized bank card request files from user data and customizable templates.
@@ -50,26 +49,6 @@ Manually generating bank card application files is time-consuming and error-pron
 
 ---
 
-## 📂 Project Structure
-
-```
-
-Bank-Card-Application-File-Generator/
-├── frontend/              # React app
-│   ├── src/
-│   │   ├── components/    # Upload UI, form generator, etc.
-│   │   └── App.js
-│   └── public/
-├── backend/               # Flask app
-│   ├── PowerCARDGenerator.py
-│   ├── database.py
-│   ├── models.py
-│   └── app.py             # Main Flask app
-
-````
-
----
-
 ## 📦 Installation
 
 ### Step 1: Clone the repository
@@ -107,24 +86,6 @@ The React app will open in your browser at `http://localhost:3000`.
 3. Click **Generate** to create your `output_powercard.txt`
 4. All generated records are saved in the database with tracking codes
 5. Download or inspect the final file
-
----
-
-## 🧪 Example Template Field
-
-Each field in the template has the following structure:
-
-```json
-{
-  "name": "record_type",
-  "required": true,
-  "length": 2,
-  "type": "AN",        // A: alpha, N: numeric, AN: alphanumeric
-  "default": "DT"
-}
-```
-
-This ensures the generator only outputs well-structured, valid lines.
 
 ---
 
