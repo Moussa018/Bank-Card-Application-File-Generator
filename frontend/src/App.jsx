@@ -34,7 +34,7 @@ function Header() {
             <span style={{color: '#fff', fontWeight: 700, fontSize: '2.1rem', letterSpacing: 1, textShadow: '0 0 12px #17e6ff99, 0 2px 8px #0002'}}>Power</span><span className="logo-accent" style={{color: '#17e6ff', fontWeight: 700, fontSize: '2.1rem', marginLeft: 6, letterSpacing: 0.5}}>CARD</span>
           </div>
           <nav className="header-nav">
-            <a href="https://github.com/Moussa018/Bank-Card-Application-File-Generator/tree/mainly" className="header-doc-link" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/Moussa018/Bank-Card-Application-File-Generator/tree/Main" className="header-doc-link" target="_blank" rel="noopener noreferrer">
               Documentation
             </a>
             <a href="https://github.com/Moussa018" className="header-user-link" target="_blank" rel="noopener noreferrer">
