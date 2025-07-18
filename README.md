@@ -10,7 +10,7 @@ This tool simplifies the process of creating correctly formatted `.txt` files (l
 
 Manually generating bank card application files is time-consuming and error-prone. This app automates the process by:
 
-- Allowing users to import data from `.csv` or `.json` files
+- Allowing users to import data from `.json` files
 - Validating all fields against a template (types, lengths, required)
 - Applying default values when needed
 - Saving all generated codes in a persistent database
