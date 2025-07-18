@@ -20,7 +20,7 @@ Manually generating bank card application files is time-consuming and error-pron
 
 ## 🚀 Features
 
-- 📂 **Import Data**: Supports `.json` and `.csv` uploads
+- 📂 **Import Data**: Supports `.json` uploads
 - 🧩 **Flexible Template**: Customize fields (name, length, type, required, default)
 - ✅ **Validation Engine**: Enforces type and length rules with feedback
 - 💾 **SQLite Database**: Stores all generated entries and their associated codes
